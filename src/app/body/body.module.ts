@@ -39,7 +39,7 @@ import { TipoDeProdutoModalComponent } from './adm-cadastrar/tipo-de-produto/tip
     NgxPaginationModule,
     OrderModule,
   ],
-  providers: [{ provide: LOCALE_ID, useValue: 'pt' }],
+  providers: [{ provide: LOCALE_ID, useValue: 'en' }],
   bootstrap: [ToastComponent],
 })
 export class BodyModule {}
