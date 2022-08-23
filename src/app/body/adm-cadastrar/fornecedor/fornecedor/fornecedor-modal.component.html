@@ -1,0 +1,159 @@
+<form [formGroup]="formModal" *ngIf="tipoForm; else deletar">
+  <div class="modal-header">
+    <h5 class="modal-title">
+      {{ tipoForm }} cadastro de {{ title | lowercase }}
+    </h5>
+    <button
+      type="button"
+      class="close"
+      aria-label="Close"
+      (click)="activeModal.dismiss('Cross click')"
+    >
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <div class="form-group">
+    <div class="form">
+      <label class="font-weight-bold" for="ramoSetorId">Ramo (Setor)</label>
+      <select id="ramoSetorId" formControlName="ramoSetorId" [attr.disabled]="!editavel && !this.novoCadastro ? '' : null" [class]="aplicaCssErro('ramoSetorId')"
+      class="form-control" (keyup)="handleKeyUp($event)" (change)="onChangeTipo($event.target)" *ngIf="ramoSetores | async as ramoSetores; else loading">
+        <option selected="" value="0">Selecione...</option>
+        <option *ngFor=" let ramoSetor of ramoSetores" value="{{ ramoSetor.id }}"> {{ ramoSetor.nmRamoSetor }}</option>
+      </select>
+      <br>
+      <app-form-field
+        formControlName="nmFornecedor"
+        [classeCss]="aplicaCssErro('nmFornecedor')"
+        id="descricaoFornecedor"
+        label="Fornecedor"
+        [control]="formModal.get('nmFornecedor')"
+        autocomplete="nmFornecedor"
+        [isReadOnly]="!this.novoCadastro && !editavel"
+        [rows]="'3'"
+      ></app-form-field>
+
+        <app-form-field
+        formControlName="nuCnpj"
+        [classeCss]="aplicaCssErro('nuCnpj')"
+        id="nuCnpj"
+        label="CNPJ"
+        [control]="formModal.get('nuCnpj')"
+        autocomplete="nuCnpj"
+        placeholder="99.999.999/9999-99"
+        [isReadOnly]="!this.novoCadastro && !editavel"
+        [rows]="'1'"
+      ></app-form-field>
+
+      <app-form-field
+        formControlName="nuTelefone"
+        [classeCss]="aplicaCssErro('nuTelefone')"
+        id="nuTelefone"
+        label="Telefone"
+        [control]="formModal.get('nuTelefone')"
+        autocomplete="nuTelefone"
+        [isReadOnly]="!this.novoCadastro && !editavel"
+        [rows]="'1'"
+      ></app-form-field>
+
+      <div class="form-check form-check-inline">
+        <input
+          class="form-check-input"
+          type="radio"
+          formControlName="inAtivo"
+          id="ativo"
+          value="1"
+          [attr.disabled]="!editavel && !this.novoCadastro ? '' : null"
+        />
+        <label class="form-check-label" for="ativo">Ativo</label>
+      </div>
+      <div class="form-check form-check-inline">
+        <input
+          class="form-check-input"
+          type="radio"
+          formControlName="inAtivo"
+          id="inativo"
+          value="0"
+          [attr.disabled]="!editavel && !this.novoCadastro ? '' : null"
+        />
+        <label class="form-check-label" for="inativo">Inativo</label>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <div class="float-right">
+      <!-- Botão Cancelar -->
+      <button
+        (click)="activeModal.dismiss('Cancel click')"
+        class="btn btn-outline-secondary w-20"
+        type="submit"
+      >
+        <span translate><i class="fa fa-arrow-left"></i> Cancelar</span>
+      </button>
+
+      <!-- Botão Salvar -->
+      <button
+        (click)="onSalvar()"
+        class="btn btn-primary w-20 ml-2"
+        type="submit"
+        *ngIf="this.novoCadastro && !editavel"
+      >
+        <span translate><i class="fas fa-plus"></i> Salvar</span>
+      </button>
+
+      <!-- Botão Editar -->
+      <button
+        (click)="onSalvar()"
+        class="btn btn-primary w-20 ml-2"
+        type="submit"
+        [disabled]="!formModal.dirty"
+        *ngIf="!this.novoCadastro && editavel"
+      >
+        <span translate><i class="fas fa-edit"></i>Salvar</span>
+      </button>
+    </div>
+  </div>
+</div>
+</form>
+
+<ng-template #loading>
+  <span>Carregando...</span>
+</ng-template>
+
+<ng-template #deletar>
+  <div class="modal-header">
+    <h4 class="modal-title" id="modal-title">Confirmar exclusão</h4>
+    <button
+      type="button"
+      class="close"
+      aria-describedby="modal-title"
+      (click)="activeModal.dismiss('Cross click')"
+    >
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  <div class="modal-body">
+    <p>
+      <strong>Tem certeza que deseja excluir {{ title | lowercase }}? </strong>
+    </p>
+    <p>
+      <span class="text-danger"
+        >Se você confirmar a exclusão, não será mais possível listar e editar
+        este item.</span
+      >
+    </p>
+  </div>
+  <div class="modal-footer">
+    <button
+      type="button"
+      class="btn btn-outline-secondary"
+      (click)="activeModal.dismiss('Cancel click')"
+    >
+      Cancelar
+    </button>
+    <button type="button" class="btn btn-danger" (click)="onDeletar()">
+      Excluir
+    </button>
+  </div>
+</ng-template>

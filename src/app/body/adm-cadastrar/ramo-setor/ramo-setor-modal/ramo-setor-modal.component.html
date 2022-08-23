@@ -1,0 +1,126 @@
+<form [formGroup]="formModal" *ngIf="tipoForm; else deletar">
+  <div class="modal-header">
+    <h5 class="modal-title">
+      {{ tipoForm }} cadastro de {{ title | lowercase }}
+    </h5>
+    <button
+      type="button"
+      class="close"
+      aria-label="Close"
+      (click)="activeModal.dismiss('Cross click')"
+    >
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <div class="form">
+      <div class="form-group">
+
+      <app-form-field
+        formControlName="nmRamoSetor"
+        [classeCss]="aplicaCssErro('nmRamoSetor')"
+        id="nmRamoSetor"
+        label="Ramo (Setor)"
+        [control]="formModal.get('nmRamoSetor')"
+        autocomplete="nmRamoSetor"
+        [isReadOnly]="!this.novoCadastro && !editavel"
+        [rows]="'2'"
+      ></app-form-field>
+
+      <div class="form-check form-check-inline">
+        <input
+          class="form-check-input"
+          type="radio"
+          formControlName="inAtivo"
+          id="ativo"
+          value="1"
+          [attr.disabled]="!editavel && !this.novoCadastro ? '' : null"
+        />
+        <label class="form-check-label" for="ativo">Ativo</label>
+      </div>
+      <div class="form-check form-check-inline">
+        <input
+          class="form-check-input"
+          type="radio"
+          formControlName="inAtivo"
+          id="inativo"
+          value="0"
+          [attr.disabled]="!editavel && !this.novoCadastro ? '' : null"
+        />
+        <label class="form-check-label" for="inativo">Inativo</label>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <div class="float-right">
+      <!-- HTML markup for Cancelar button -->
+      <button
+        (click)="activeModal.dismiss('Cancel click')"
+        class="btn btn-outline-secondary w-20"
+        type="submit"
+      >
+        <span translate><i class="fa fa-arrow-left"></i> Cancelar</span>
+      </button>
+
+      <!-- HTML markup for Salvar button -->
+      <button
+        (click)="onSalvar()"
+        class="btn btn-primary w-20 ml-2"
+        type="submit"
+        *ngIf="this.novoCadastro && !editavel"
+      >
+        <span translate><i class="fas fa-plus"></i> Salvar</span>
+      </button>
+
+      <!-- HTML markup for Editar button -->
+      <button
+        (click)="onSalvar()"
+        class="btn btn-primary w-20 ml-2"
+        type="submit"
+        [disabled]="!formModal.dirty"
+        *ngIf="!this.novoCadastro && editavel"
+      >
+        <span translate><i class="fas fa-edit"></i>Salvar</span>
+      </button>
+    </div>
+  </div>
+  </div>
+</form>
+
+<ng-template #deletar>
+  <div class="modal-header">
+    <h4 class="modal-title" id="modal-title">Confirmar exclusão</h4>
+    <button
+      type="button"
+      class="close"
+      aria-describedby="modal-title"
+      (click)="activeModal.dismiss('Cross click')"
+    >
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  <div class="modal-body">
+    <p>
+      <strong>Tem certeza que deseja excluir {{ title | lowercase }}? </strong>
+    </p>
+    <p>
+      <span class="text-danger"
+        >Se você confirmar a exclusão, não será mais possível listar e editar
+        este item.</span
+      >
+    </p>
+  </div>
+  <div class="modal-footer">
+    <button
+      type="button"
+      class="btn btn-outline-secondary"
+      (click)="activeModal.dismiss('Cancel click')"
+    >
+      Cancelar
+    </button>
+    <button type="button" class="btn btn-danger" (click)="onDeletar()">
+      Excluir
+    </button>
+  </div>
+</ng-template>

@@ -1,0 +1,97 @@
+<section class="m-4">
+
+  <h1 class="mb-4">Cadastro de {{ title | lowercase }}</h1>
+
+  <div class="card mb-4 p-4">
+    <div class="form pb-3">
+      <div class="form-row" [formGroup]="queryField">
+
+        <div class="col-lg-6">
+          <app-form-field formControlName="dsTipoProduto" [classeCss]="aplicaCssErro('dsTipoProduto')"
+            id="Tipo de Produto" label="Tipo de Produto" [control]="queryField.get('dsTipoProduto')">
+          </app-form-field>
+        </div>
+
+        <div class="col">
+          <label for="inAtivo" class="font-weight-bold">Situação</label>
+          <select formControlName="inAtivo" id="inAtivo" class="form-control">
+            <option value="-1">TODOS</option>
+            <option value="1">Ativo</option>
+            <option value="0">Inativo</option>
+          </select>
+        </div>
+        <div class="col">
+          <label style="display:block;">&nbsp;</label>
+          <button class="btn btn-primary btn-block" type="submit" (click)="onBuscar()">Buscar</button>
+        </div>
+        <div class="col">
+          <label style="display:block;">&nbsp;</label>
+          <button type="submit" class="btn btn-outline-primary px-4 btn-block"
+            (click)="abrirModal(tipoProduto, 'Novo', true, false)">Novo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card p-3 table-responsive-xl-12">
+    <div class="" *ngIf="( buscaResults  || tipoProdutosResult ) as tipoProdutos; else loading">
+      <table class="table table-bordered table-striped  table-hover">
+        <thead>
+          <tr>
+            <th scope="col" class=" col-1" (click)="setOrder('id')">Nº
+              <span class="sort-arrow" *ngIf="key =='id'">{{ reverse ? '▲' : '▼' }}</span>
+            </th>
+            <th scope="col" class=" col-5" (click)="setOrder('dsTipoProduto')">Tipo de Produto
+              <span class="sort-arrow" *ngIf="key =='dsTipoProduto'">{{ reverse ? '▲' : '▼' }}</span>
+            </th>
+            <th scope="col" class=" col-1" (click)="setOrder('inAtivo')">Situação
+              <span class="sort-arrow" *ngIf="key =='inAtivo'">{{ reverse ? '▲' : '▼' }}</span>
+            </th>
+            <th scope="col" class=" col-1">Ações</th>
+          </tr>
+        </thead>
+        <tbody *ngIf="tipoProdutos.length != 0">
+          <tr
+            *ngFor="let tipoProduto of tipoProdutos | paginate: { itemsPerPage: pageSize, currentPage: paginaAtual, totalItems: count } | orderBy: key :reverse ">
+            <td>{{ tipoProduto.id }}</td>
+            <td>{{ tipoProduto.dsTipoProduto }}</td>
+            <td>{{ tipoProduto.inAtivo ? 'Ativo': 'Inativo' }}</td>
+            <td>
+              <button type="submit" (click)="abrirModal(tipoProduto, 'Detalhar', false, false)" class="btn p-1"
+                placement="top" ngbTooltip="Detalhar">
+                <h5><i class="bi bi-info-circle-fill" style="color: #0d6efd"></i></h5>
+              </button>
+              <button type="submit" (click)="abrirModal(tipoProduto, 'Editar', false, true)" class="btn p-1"
+                placement="top" ngbTooltip="Editar">
+                <h5><i class="bi bi-pencil-square" style="color: #0d6efd"></i></h5>
+              </button>
+              <button type="submit" (click)="abrirModal(tipoProduto, '', false, false)" class="btn p-1" placement="top"
+                ngbTooltip="Excluir" [disabled]="!tipoProduto.inAtivo">
+                <h5><i class="bi bi-x-circle" style="color: #0d6efd"></i></h5>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+        <tbody *ngIf="tipoProdutos.length == 0 && buscaResults.length == 0">
+          <tr class="m5">
+            <td colspan="5"><span>Nenhum registro encontrado.</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>
+        Você está na <strong>{{ paginaAtual }}ª</strong> página, exibindo <strong>{{ tipoProdutos.length }}</strong>
+        registros de um total de <strong>{{ count }}</strong>.
+      </p>
+
+      <pagination-controls (pageChange)="handlePageChange($event)" previousLabel="Anterior" nextLabel="Próximo"
+        class="my-pagination">
+      </pagination-controls>
+    </div>
+  </div>
+
+  <ng-template #loading>
+    <span>Carregando Cadastro de Tipos de Produtos...</span>
+  </ng-template>
+
+</section>
