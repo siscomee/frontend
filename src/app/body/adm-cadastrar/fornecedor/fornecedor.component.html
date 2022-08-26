@@ -3,23 +3,28 @@
 
   <div class="card mb-4 p-4">
     <div class="form pb-3">
-      <div class="form-row" [formGroup]="queryField">
-
-        <div class="col-lg-6">
-          <app-form-field
-            formControlName="nmFornecedor"
-            [classeCss]="aplicaCssErro('nmFornecedor')"
-            id="nmFornecedor"
-            label="Fornecedor"
-            [control]="queryField.get('nmFornecedor')"
-          >
-          </app-form-field>
+      <div class="form-row">
+        <div class="col-lg-2">
+          <label for="nmRamoSetor" class="font-weight-bold">Ramo Setor</label>
+          <select id="nmRamoSetor" class="form-control" (change)="onChangeTipo($event.target)" *ngIf="ramoSetores | async as ramoSetores; else loading">
+            <option selected="" value="0">Selecione...</option>
+            <option *ngFor=" let fornecedor of ramoSetores" value="{{ fornecedor.id }}">{{ fornecedor.nmRamoSetor }}</option>
+          </select>
         </div>
-
+        <div class="col-lg-5">
+          <label for="nmFornecedor" class="font-weight-bold">Fornecedor</label>
+          <input
+            id="nmFornecedor"
+            (keyup)="onChangeDs($event.target)"
+            class="form-control"
+            type="text"
+            maxlength="80"
+          />
+        </div>
         <div class="col">
           <label for="inAtivo" class="font-weight-bold">Situação</label>
-          <select formControlName="inAtivo" id="inAtivo" class="form-control">
-            <option value="-1">TODOS</option>
+          <select id="inAtivo" class="form-control" (change)="onChangeSituacao($event.target)">
+            <option selected value="-1">TODOS</option>
             <option value="1">Ativo</option>
             <option value="0">Inativo</option>
           </select>
@@ -27,23 +32,11 @@
 
         <div class="col">
           <label style="display: block">&nbsp;</label>
-          <button
-            class="btn btn-primary btn-block"
-            type="submit"
-            (click)="onBuscar()"
-          >
-            Buscar
-          </button>
+          <button type="button" class="btn btn-primary btn-block" (click)="filtrar()">Buscar</button>
         </div>
         <div class="col">
           <label style="display: block">&nbsp;</label>
-          <button
-            type="submit"
-            class="btn btn-outline-primary px-4 btn-block"
-            (click)="abrirModal(fornecedor, 'Novo', true, false)"
-          >
-            Novo
-          </button>
+          <button type="button" class="btn btn-outline-primary px-4 btn-block" (click)="abrirModal(fornecedor, 'Novo', true, false)">Novo</button>
         </div>
       </div>
     </div>
@@ -52,7 +45,7 @@
   <div class="card p-3 table-responsive-xl-12">
     <div
       class=""
-      *ngIf="buscaResults || fornecedoresResults as fornecedores; else loading"
+      *ngIf="fornecedores | async as fornecedores; else loading"
     >
       <table class="table table-bordered table-striped table-hover">
         <thead>
@@ -63,14 +56,20 @@
                 reverse ? "▲" : "▼"
               }}</span>
             </th>
-            <th scope="col" class="col-3" (click)="setOrder('nmFornecedor')">
+            <th scope="col" class="col-2" (click)="setOrder('nmRamoSetor')">
+              Ramo
+              <span class="sort-arrow" *ngIf="key == 'nmRamoSetor'">{{
+                reverse ? "▲" : "▼"
+              }}</span>
+            </th>
+            <th scope="col" class="col-4" (click)="setOrder('nmFornecedor')">
               Fornecedor
               <span class="sort-arrow" *ngIf="key == 'nmFornecedor'">{{
                 reverse ? "▲" : "▼"
               }}</span>
             </th>
-            <th scope="col" class="col-1" (click)="setOrder('nuCnpj')">
-              CNPJ
+            <th scope="col" class="col-2" (click)="setOrder('nuCnpj')">
+              CPNJ
               <span class="sort-arrow" *ngIf="key == 'nuCnpj'">{{
                 reverse ? "▲" : "▼"
               }}</span>
@@ -78,12 +77,6 @@
             <th scope="col" class="col-1" (click)="setOrder('nuTelefone')">
               Telefone
               <span class="sort-arrow" *ngIf="key == 'nuTelefone'">{{
-                reverse ? "▲" : "▼"
-              }}</span>
-            </th>
-            <th scope="col" class="col-2" (click)="setOrder('nmRamoSetor')">
-             Ramo (Setor)
-              <span class="sort-arrow" *ngIf="key == 'nmRamoSetor'">{{
                 reverse ? "▲" : "▼"
               }}</span>
             </th>
@@ -101,21 +94,16 @@
           <tr
             *ngFor="
               let fornecedor of fornecedores
-                | paginate
-                  : {
-                      itemsPerPage: pageSize,
-                      currentPage: paginaAtual,
-                      totalItems: count
-                    }
+                | paginate: { itemsPerPage: 10, currentPage: paginaAtual }
                 | orderBy: key:reverse
             "
           >
             <td>{{ fornecedor.id }}</td>
+            <td>{{ fornecedor.nmRamoSetor }}</td>
             <td>{{ fornecedor.nmFornecedor }}</td>
             <td>{{ fornecedor.nuCnpj }}</td>
             <td>{{ fornecedor.nuTelefone }}</td>
-            <td>{{ fornecedor.nmRamoSetor }}</td>
-            <td>{{ fornecedor.inAtivo ? "Ativo" : "Inativo" }}</td>
+            <td>{{ fornecedor.inAtivo == 'true' ? "Ativo" : "Inativo" }}</td>
             <td>
               <button
                 type="submit"
@@ -145,29 +133,29 @@
                 class="btn p-1"
                 placement="top"
                 ngbTooltip="Excluir"
-                [disabled]="!fornecedor.inAtivo"
+                [disabled]="fornecedor.inAtivo == '0'"
               >
                 <h5><i class="bi bi-x-circle" style="color: #0d6efd"></i></h5>
               </button>
             </td>
           </tr>
         </tbody>
-        <tbody *ngIf="fornecedores.length == 0 && buscaResults.length == 0">
-          <tr class="m5">
-            <td colspan="5"><span>Nenhum registro encontrado.</span></td>
+        <tbody *ngIf="fornecedores.length == 0">
+          <tr>
+            <td colspan="4">Nenhum registro encontrado.</td>
           </tr>
         </tbody>
       </table>
 
       <p>
         Você está na <strong>{{ paginaAtual }}ª</strong> página, exibindo
-        <strong>{{ fornecedores.length }}</strong> registros de um total de
-        <strong>{{ count }}</strong
+        <strong>10</strong> registros de um total de
+        <strong>{{ fornecedores.length }}</strong
         >.
       </p>
 
       <pagination-controls
-        (pageChange)="handlePageChange($event)"
+        (pageChange)="paginaAtual = $event"
         previousLabel="Anterior"
         nextLabel="Próximo"
         class="my-pagination"
@@ -176,6 +164,6 @@
     </div>
   </div>
   <ng-template #loading>
-    <span>Carregando Cadastros de Fornecedores...</span>
+    <span>Carregando...</span>
   </ng-template>
 </section>

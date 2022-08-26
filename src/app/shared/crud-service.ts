@@ -37,7 +37,6 @@ export class CrudService<T> {
     return this.http
       .get<any[]>(`${this.API_URL}${this.END_POINT_LIST}`, { params })
       .pipe(
-        //delay(1000),
         tap(console.log),
         catchError(this.handleError<T>('listagem de dados'))
       );
