@@ -16,7 +16,9 @@ import {
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { FormValidator } from './../../../../shared/form-validator';
 import { ToastService } from 'src/app/shared/services/toast.service';
-import { empty, Observable } from 'rxjs';
+import { empty, Observable, Subject } from 'rxjs';
+import { MensagemConfirmService } from 'src/app/shared/services/mensagem-confirm.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-fornecedor-modal',
@@ -25,55 +27,55 @@ import { empty, Observable } from 'rxjs';
 })
 export class FornecedorModalComponent implements OnInit {
   formModal!: FormGroup;
-  fornecedores!: Observable<Fornecedor[]>;
+  resultado!: ResultadoFornecedorForm;
   ramoSetores!: Observable<RamoSetor[]>;
+  fornecedoresUnicidade!: Observable<Fornecedor[]>;
 
-  idRamoSetor: number = 0;
+  idRamo: number = 0;
+  nmFornecedor: String = '';
+  situacao: String = '-1';
+
+  error$ = new Subject<boolean>();
 
   @Input() title!: string;
   @Input() public fornecedor!: Fornecedor;
   @Input() public novoCadastro!: boolean;
   @Input() public tipoForm!: string;
   @Input() public editavel!: boolean;
-  error$: any;
-  mensagemConfirmService: any;
 
   constructor(
     private formBuilder: FormBuilder,
     public activeModal: NgbActiveModal,
-    public toastService: ToastService,
-    private service: FornecedorService
+    private service: FornecedorService,
+    private mensagemConfirmService: MensagemConfirmService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
     this.formModal = this.formBuilder.group({
-      usuarioIdAtualiza: ['1'],
+      id: [null],
+      usuarioIdAtualiza: [1],
       dtUltAtualiza: [new Date().toISOString()],
-      id: [],
-      nmFornecedor: [
-        null,
-        [Validators.required, Validators.maxLength(200)],
-        [this.codigoExistente.bind(this)],
-      ],
-      nuCnpj: ['', [Validators.required]],
-      nuTelefone: ['', [Validators.required]],
       ramoSetorId: [null, [Validators.required]],
+      nmFornecedor: [null, [Validators.required, Validators.maxLength(100)]],
+      nuCnpj: [null, [Validators.required]],
+      nuTelefone: [null, [Validators.required]],
       inAtivo: ['1'],
     });
     if (this.fornecedor != undefined) {
       this.formModal.patchValue({
-        id: this.fornecedor.id,
+        id: this.fornecedor.id.toString(),
+        ramoSetorId: this.fornecedor.ramoSetorId.toString(),
         nmFornecedor: this.fornecedor.nmFornecedor,
         nuCnpj: this.fornecedor.nuCnpj,
         nuTelefone: this.fornecedor.nuTelefone,
-        ramoSetorId: this.fornecedor.ramoSetorId.toString().indexOf,
         inAtivo: this.fornecedor.inAtivo.toString(),
         usuarioIdAtualiza: this.fornecedor.usuarioIdAtualiza,
         dtUltAtualiza: this.fornecedor.dtUltAtualiza,
       });
     }
 
-    this.ramoSetores = this.service.listarRamoSetores().pipe(
+    this.ramoSetores = this.service.listarTipos().pipe(
       catchError((error) => {
         console.error(error);
         this.error$.next(true);
@@ -83,77 +85,151 @@ export class FornecedorModalComponent implements OnInit {
     );
   }
 
-  private handleError() {
-    this.mensagemConfirmService.errorToaster('Carregando...');
-  }
-
-  verificaCampo(campo: string) {
-    return (
-      this.formModal.get(campo)?.errors && this.formModal.get(campo)?.touched
-    );
-  }
-  aplicaCssErro(campo: string) {
-    return { 'is-invalid': this.verificaCampo(campo) };
+  verificaValidacoesForm(formGroup: FormGroup) {
+    Object.keys(formGroup.controls).forEach((campo) => {
+      console.log(campo);
+      const controle = formGroup.get(campo);
+      controle?.markAsDirty();
+      controle?.markAsTouched();
+      if (controle instanceof FormGroup) {
+        this.verificaValidacoesForm(controle);
+      }
+    });
   }
 
   converterInAtivo() {
     this.formModal.patchValue({
       inAtivo: Number(this.formModal.get('inAtivo')?.value),
     });
+    this.formModal.patchValue({
+      ramoSetorId: Number(this.formModal.get('ramoSetorId')?.value),
+    });
   }
 
-  onSalvar() {
+  async onSalvar() {
     this.converterInAtivo();
 
     if (this.formModal.valid) {
-      this.service.save(this.formModal.value).subscribe((res: Fornecedor) => {
-        let resultado!: ResultadoFornecedorForm;
-        console.log(resultado, 'resultado');
+      if ((await this.validarUnicidade()) == false) {
+        this.mensagemConfirmService.infoToaster('Informação já cadastrada.');
+        return;
+      }
 
-        if (res.id == this.formModal.get('id')?.value) {
-          resultado = { record: res, tipoCrud: 'u', status: true };
-          this.editarCadastroTela(resultado);
-          console.log('atualizado');
-        } else {
-          resultado = { record: res, tipoCrud: 'c', status: true };
-          console.log('criado');
+      this.service.save(this.formModal.value).subscribe((res: Fornecedor) => {
+        let resultado: ResultadoFornecedorForm = {
+          record: res,
+          tipoCrud: '',
+          status: false,
+        };
+        if (res) {
+          if (res.id == this.formModal.get('id')?.value) {
+            resultado = { record: res, tipoCrud: 'u', status: true };
+
+            let currentUrl = this.router.url;
+            this.router.routeReuseStrategy.shouldReuseRoute = () => false;
+            this.router.onSameUrlNavigation = 'reload';
+            this.router.navigate([currentUrl]);
+          } else {
+            resultado = { record: res, tipoCrud: 'c', status: true };
+          }
         }
+
         console.log(res);
         this.activeModal.close(resultado);
       });
     } else {
-      FormValidator.verificaValidacoesForm(this.formModal);
-      this.formModal.get('inAtivo')?.value === 1
-        ? this.formModal.get('inAtivo')?.setValue('1')
-        : this.formModal.get('inAtivo')?.setValue('0');
+      this.verificaValidacoesForm(this.formModal);
       console.log('fomulário não está válido');
     }
   }
 
+  private handleError() {
+    this.mensagemConfirmService.errorToaster(
+      'Erro ao carregar cadastros de fornecedores. Tente novamente mais tarde...'
+    );
+  }
+
+  cadastrar(fornecedor: any) {
+    fornecedor.date = new Date();
+    this.resultado = {
+      record: this.fornecedor,
+      tipoCrud: 'c',
+      status: true,
+    };
+
+    const crudResult = this.service.save(this.formModal.value);
+
+    console.log(this.resultado);
+
+    this.activeModal.close(this.resultado);
+  }
+
   editarCadastroTela(res: ResultadoFornecedorForm) {
+    this.fornecedor.usuarioIdAtualiza = res.record.usuarioIdAtualiza;
+    this.fornecedor.dtUltAtualiza = res.record.dtUltAtualiza;
     this.fornecedor.nmFornecedor = res.record.nmFornecedor;
     this.fornecedor.nuCnpj = res.record.nuCnpj;
     this.fornecedor.nuTelefone = res.record.nuTelefone;
     this.fornecedor.ramoSetorId = res.record.ramoSetorId;
-    this.fornecedor.usuarioIdAtualiza = res.record.usuarioIdAtualiza;
-    this.fornecedor.dtUltAtualiza = res.record.dtUltAtualiza;
     this.fornecedor.inAtivo = res.record.inAtivo;
   }
 
-  onDeletar() {
-    this.inativar();
-    this.service.remove(this.formModal.value).subscribe((res: Fornecedor) => {
-      let resultado: ResultadoFornecedorForm;
+  cadastrando() {
+    if (this.formModal.valid) {
+      this.cadastrar(this.formModal.value);
+    } else {
+      this.verificaValidacoesForm(this.formModal);
+      console.log('fomulário não está válido');
+    }
+  }
 
-      if (res) {
-        resultado = { record: res, tipoCrud: 'd', status: true };
-      } else {
-        this.formModal.patchValue({ inAtivo: 1 });
-        this.fornecedor.inAtivo = this.formModal.get('inAtivo')?.value;
-        resultado = { record: res, tipoCrud: '', status: true };
-      }
-      this.activeModal.close(resultado);
-    });
+  Ondeletar() {
+    this.inativar();
+
+    this.service
+      .inativar(this.formModal.get('id')?.value)
+      .subscribe((res: any) => {
+        let resultado: ResultadoFornecedorForm;
+        if (res) {
+          resultado = { record: res, tipoCrud: 'd', status: true };
+        } else {
+          this.formModal.patchValue({ inAtivo: 1 });
+          this.fornecedor.inAtivo = this.formModal.get('inAtivo')?.value;
+          resultado = { record: res, tipoCrud: '', status: true };
+        }
+        console.log(resultado);
+        this.activeModal.close(resultado);
+      });
+  }
+
+  async validarUnicidade() {
+    let unico = false;
+
+    const response = await this.service
+      .unicidade(
+        this.formModal.get('ramoSetorId')?.value,
+        this.formModal.get('nmFornecedor')?.value,
+        this.formModal.get('id')?.value
+      )
+      .toPromise();
+
+    response == true ? (unico = true) : (unico = false);
+
+    return unico;
+  }
+
+  onChangeTipo(e: any) {
+    console.log(e.value);
+    this.idRamo = e.value;
+  }
+
+  cancelando() {
+    this.resultado = {
+      record: this.fornecedor,
+      tipoCrud: '',
+      status: true,
+    };
+    this.activeModal.close();
   }
 
   inativar() {
@@ -161,19 +237,10 @@ export class FornecedorModalComponent implements OnInit {
     this.fornecedor.inAtivo = this.formModal.get('inAtivo')?.value;
   }
 
-  codigoExistente(control: FormControl) {
-    return this.service
-      .unicidade(control.value, this.formModal.get('id')?.value)
-      .pipe(
-        map((existe) => (existe ? { codigoExiste: true } : null)),
-        tap(console.log),
-        first()
-      );
-  }
-
-  onChangeTipo(e: any) {
-    console.log(e.value);
-    this.idRamoSetor = e.value;
+  verificaCampo(campo: string) {
+    return (
+      this.formModal.get(campo)?.errors && this.formModal.get(campo)?.touched
+    );
   }
 
   handleKeyUp(e: any) {
@@ -185,5 +252,11 @@ export class FornecedorModalComponent implements OnInit {
   handleSubmit(e: any) {
     e.preventDefault();
     console.log('foi...');
+  }
+
+  aplicaCssErro(campo: string) {
+    const classeCss = 'is-invalid';
+
+    return { 'is-invalid': this.verificaCampo(campo) };
   }
 }

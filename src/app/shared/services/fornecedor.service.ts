@@ -27,27 +27,43 @@ export class FornecedorService extends CrudService<Fornecedor> {
     super(http, `${environment.API}fornecedor`, mensagem);
   }
 
-  listarRamoSetores() {
+  listarTipos() {
     return this.http
       .get<RamoSetor[]>(`${environment.API}fornecedor/ramoSetores`)
-      .pipe(delay(1000), tap(console.log));
+      .pipe(delay(500), tap(console.log));
   }
 
-  unicidade(param: string, id: number | null) {
-    let params = new HttpParams();
-    params = param
-      ? params.set('nmFornecedor', param)
-      : params.set('nmFornecedor', '');
+  unicidade(idRamo: Number, nmFornecedor: String, idFornecedor: Number) {
     return this.http
-      .get<Fornecedor[]>(`${environment.API}fornecedor/unicidade`, { params })
-      .pipe(
-        tap(console.log),
-        map((dados: { nmFornecedor: string; id: number }[]) =>
-          dados.filter((v) => v.id != id && v.nmFornecedor == param)
-        ),
-        tap(console.log),
-        map((dados: any[]) => dados.length > 0),
-        tap(console.log)
-      );
+      .get<Fornecedor[]>(
+        `${environment.API}fornecedor/unicidade/` +
+          idRamo +
+          '/' +
+          nmFornecedor +
+          '/' +
+          idFornecedor
+      )
+      .pipe(tap(console.log));
+  }
+
+  inativar(id: any) {
+    return this.http
+      .get<Fornecedor[]>(`${environment.API}fornecedor/inativar/` + id)
+      .pipe(tap(console.log));
+  }
+
+  filtrar(idRamo: Number, nmFornecedor: String, situacao: String) {
+    let nmFornecedorDs = nmFornecedor != '' ? nmFornecedor : 'nulo';
+
+    return this.http
+      .get<Fornecedor[]>(
+        `${environment.API}fornecedor/filtrar/` +
+          idRamo +
+          '/' +
+          nmFornecedorDs +
+          '/' +
+          situacao
+      )
+      .pipe(delay(1000), tap(console.log));
   }
 }

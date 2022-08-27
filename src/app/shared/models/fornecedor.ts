@@ -3,9 +3,9 @@ export interface Fornecedor {
   nmFornecedor: string;
   nuCnpj: string;
   nuTelefone: string;
-  inAtivo: number;
   ramoSetorId: number;
   nmRamoSetor: string;
+  inAtivo: any;
   usuarioIdAtualiza: number;
   dtUltAtualiza: Date;
 }
