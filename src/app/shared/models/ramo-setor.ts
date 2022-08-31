@@ -1,7 +1,7 @@
 export interface RamoSetor {
   id: number;
   nmRamoSetor: string;
-  inAtivo: number;
+  inAtivo: any;
   usuarioIdAtualiza: number;
   dtUltAtualiza: Date;
 }
