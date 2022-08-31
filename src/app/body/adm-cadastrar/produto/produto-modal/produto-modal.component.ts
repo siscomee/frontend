@@ -1,3 +1,8 @@
+import { ProdutoService } from '../../../../shared/services/produto.service';
+import { Produto } from '../../../../shared/models/produto';
+import { ResultadoProdutoForm } from '../../../../shared/models/resultado-produto-form';
+import { TipoDeProduto } from 'src/app/shared/models/tipo-de-produto';
+
 import { switchMap, delay, map, tap, first, catchError } from 'rxjs/operators';
 import { Component, Input, OnInit } from '@angular/core';
 import {
@@ -11,12 +16,9 @@ import {
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { FormValidator } from './../../../../shared/form-validator';
 import { ToastService } from 'src/app/shared/services/toast.service';
-import { empty, Observable } from 'rxjs';
-
-import { ResultadoProdutoForm } from '../../../../shared/models/resultado-produto-form';
-import { ProdutoService } from '../../../../shared/services/produto.service';
-import { Produto } from '../../../../shared/models/produto';
-import { TipoDeProduto } from 'src/app/shared/models/tipo-de-produto';
+import { empty, Observable, Subject } from 'rxjs';
+import { MensagemConfirmService } from 'src/app/shared/services/mensagem-confirm.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-produto-modal',
@@ -25,61 +27,57 @@ import { TipoDeProduto } from 'src/app/shared/models/tipo-de-produto';
 })
 export class ProdutoModalComponent implements OnInit {
   formModal!: FormGroup;
-  produtos!: Observable<Produto[]>;
-  tipoDeProdutos!: Observable<TipoDeProduto[]>;
+  resultado!: ResultadoProdutoForm;
+  tiposDeProdutos!: Observable<TipoDeProduto[]>;
+  produtosUnicidade!: Observable<Produto[]>;
 
-  idTipoProduto: number = 0;
+  idTipoDeProduto: number = 0;
+  nmProduto: String = '';
+  situacao: String = '-1';
+
+  error$ = new Subject<boolean>();
 
   @Input() title!: string;
   @Input() public produto!: Produto;
   @Input() public novoCadastro!: boolean;
   @Input() public tipoForm!: string;
   @Input() public editavel!: boolean;
-  error$: any;
-  mensagemConfirmService: any;
 
   constructor(
     private formBuilder: FormBuilder,
     public activeModal: NgbActiveModal,
-    public toastService: ToastService,
-    private service: ProdutoService
+    private service: ProdutoService,
+    private mensagemConfirmService: MensagemConfirmService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
     this.formModal = this.formBuilder.group({
+      id: [null],
       usuarioIdAtualiza: [1],
       dtUltAtualiza: [new Date().toISOString()],
-      id: [],
-      nmProduto: [
-        null,
-        [
-          Validators.required,
-          Validators.minLength(3),
-          Validators.maxLength(100),
-        ],
-        [this.codigoExistente.bind(this)],
-      ],
+      tipoProdutoId: [null, [Validators.required]],
+      nmProduto: [null, [Validators.required, Validators.maxLength(100)]],
       vlProduto: [null, [Validators.required]],
       tpMedida: [null, [Validators.required]],
       qtdProduto: [null, [Validators.required]],
-      tipoProdutoId: [null, [Validators.required]],
       inAtivo: ['1'],
     });
     if (this.produto != undefined) {
       this.formModal.patchValue({
-        id: this.produto.id,
+        id: this.produto.id.toString(),
+        tipoProdutoId: this.produto.tipoProdutoId.toString(),
         nmProduto: this.produto.nmProduto,
         vlProduto: this.produto.vlProduto,
         tpMedida: this.produto.tpMedida,
         qtdProduto: this.produto.qtdProduto,
-        tipoProdutoId: this.produto.tipoProdutoId.toString().indexOf,
         inAtivo: this.produto.inAtivo.toString(),
         usuarioIdAtualiza: this.produto.usuarioIdAtualiza,
         dtUltAtualiza: this.produto.dtUltAtualiza,
       });
     }
 
-    this.tipoDeProdutos = this.service.listarTipoDeProdutos().pipe(
+    this.tiposDeProdutos = this.service.listarTipos().pipe(
       catchError((error) => {
         console.error(error);
         this.error$.next(true);
@@ -89,79 +87,152 @@ export class ProdutoModalComponent implements OnInit {
     );
   }
 
-  private handleError() {
-    this.mensagemConfirmService.errorToaster('Carregando...');
-  }
-
-  verificaCampo(campo: string) {
-    return (
-      this.formModal.get(campo)?.errors && this.formModal.get(campo)?.touched
-    );
-  }
-
-  aplicaCssErro(campo: string) {
-    return { 'is-invalid': this.verificaCampo(campo) };
+  verificaValidacoesForm(formGroup: FormGroup) {
+    Object.keys(formGroup.controls).forEach((campo) => {
+      console.log(campo);
+      const controle = formGroup.get(campo);
+      controle?.markAsDirty();
+      controle?.markAsTouched();
+      if (controle instanceof FormGroup) {
+        this.verificaValidacoesForm(controle);
+      }
+    });
   }
 
   converterInAtivo() {
     this.formModal.patchValue({
       inAtivo: Number(this.formModal.get('inAtivo')?.value),
     });
+    this.formModal.patchValue({
+      tipoProdutoId: Number(this.formModal.get('tipoProdutoId')?.value),
+    });
   }
 
-  onSalvar() {
+  async onSalvar() {
     this.converterInAtivo();
 
     if (this.formModal.valid) {
-      this.service.save(this.formModal?.value).subscribe((res: Produto) => {
-        let resultado!: ResultadoProdutoForm;
+      if ((await this.validarUnicidade()) == false) {
+        this.mensagemConfirmService.infoToaster('Informação já cadastrada.');
+        return;
+      }
 
-        if (res.id == this.formModal.get('id')?.value) {
-          resultado = { record: res, tipoCrud: 'u', status: true };
-          this.editarCadastroTela(resultado);
-          console.log('atualizado');
-        } else {
-          resultado = { record: res, tipoCrud: 'c', status: true };
-          console.log('criado');
+      this.service.save(this.formModal.value).subscribe((res: Produto) => {
+        let resultado: ResultadoProdutoForm = {
+          record: res,
+          tipoCrud: '',
+          status: false,
+        };
+        if (res) {
+          if (res.id == this.formModal.get('id')?.value) {
+            resultado = { record: res, tipoCrud: 'u', status: true };
+
+            let currentUrl = this.router.url;
+            this.router.routeReuseStrategy.shouldReuseRoute = () => false;
+            this.router.onSameUrlNavigation = 'reload';
+            this.router.navigate([currentUrl]);
+          } else {
+            resultado = { record: res, tipoCrud: 'c', status: true };
+          }
         }
 
         console.log(res);
         this.activeModal.close(resultado);
       });
     } else {
-      FormValidator.verificaValidacoesForm(this.formModal);
-      this.formModal.get('inAtivo')?.value === 1
-        ? this.formModal.get('inAtivo')?.setValue('1')
-        : this.formModal.get('inAtivo')?.setValue('0');
+      this.verificaValidacoesForm(this.formModal);
       console.log('fomulário não está válido');
     }
   }
 
+  private handleError() {
+    this.mensagemConfirmService.errorToaster(
+      'Erro ao carregar cadastros de produtos. Tente novamente mais tarde...'
+    );
+  }
+
+  cadastrar(produto: any) {
+    produto.date = new Date();
+    this.resultado = {
+      record: this.produto,
+      tipoCrud: 'c',
+      status: true,
+    };
+
+    const crudResult = this.service.save(this.formModal.value);
+
+    console.log(this.resultado);
+
+    this.activeModal.close(this.resultado);
+  }
+
   editarCadastroTela(res: ResultadoProdutoForm) {
+    this.produto.usuarioIdAtualiza = res.record.usuarioIdAtualiza;
+    this.produto.dtUltAtualiza = res.record.dtUltAtualiza;
     this.produto.nmProduto = res.record.nmProduto;
     this.produto.vlProduto = res.record.vlProduto;
     this.produto.tpMedida = res.record.tpMedida;
     this.produto.qtdProduto = res.record.qtdProduto;
     this.produto.tipoProdutoId = res.record.tipoProdutoId;
     this.produto.inAtivo = res.record.inAtivo;
-    this.produto.usuarioIdAtualiza = res.record.usuarioIdAtualiza;
-    this.produto.dtUltAtualiza = res.record.dtUltAtualiza;
   }
 
-  onDeletar() {
+  cadastrando() {
+    if (this.formModal.valid) {
+      this.cadastrar(this.formModal.value);
+    } else {
+      this.verificaValidacoesForm(this.formModal);
+      console.log('fomulário não está válido');
+    }
+  }
+
+  Ondeletar() {
     this.inativar();
-    this.service.remove(this.formModal.value).subscribe((res: Produto) => {
-      let resultado: ResultadoProdutoForm;
-      if (res) {
-        resultado = { record: res, tipoCrud: 'd', status: true };
-      } else {
-        this.formModal.patchValue({ inAtivo: 1 });
-        this.produto.inAtivo = this.formModal.get('inAtivo')?.value;
-        resultado = { record: res, tipoCrud: '', status: true };
-      }
-      console.log(resultado);
-      this.activeModal.close(resultado);
-    });
+
+    this.service
+      .inativar(this.formModal.get('id')?.value)
+      .subscribe((res: any) => {
+        let resultado: ResultadoProdutoForm;
+        if (res) {
+          resultado = { record: res, tipoCrud: 'd', status: true };
+        } else {
+          this.formModal.patchValue({ inAtivo: 1 });
+          this.produto.inAtivo = this.formModal.get('inAtivo')?.value;
+          resultado = { record: res, tipoCrud: '', status: true };
+        }
+        console.log(resultado);
+        this.activeModal.close(resultado);
+      });
+  }
+
+  async validarUnicidade() {
+    let unico = false;
+
+    const response = await this.service
+      .unicidade(
+        this.formModal.get('tipoProdutoId')?.value,
+        this.formModal.get('nmProduto')?.value,
+        this.formModal.get('id')?.value
+      )
+      .toPromise();
+
+    response == true ? (unico = true) : (unico = false);
+
+    return unico;
+  }
+
+  onChangeTipo(e: any) {
+    console.log(e.value);
+    this.idTipoDeProduto = e.value;
+  }
+
+  cancelando() {
+    this.resultado = {
+      record: this.produto,
+      tipoCrud: '',
+      status: true,
+    };
+    this.activeModal.close();
   }
 
   inativar() {
@@ -169,18 +240,10 @@ export class ProdutoModalComponent implements OnInit {
     this.produto.inAtivo = this.formModal.get('inAtivo')?.value;
   }
 
-  codigoExistente(control: FormControl) {
-    return this.service
-      .unicidade(control.value, this.formModal.get('id')?.value)
-      .pipe(
-        map((existe) => (existe ? { codigoExiste: true } : null)),
-        tap(console.log),
-        first()
-      );
-  }
-  onChangeTipo(e: any) {
-    console.log(e.value);
-    this.idTipoProduto = e.value;
+  verificaCampo(campo: string) {
+    return (
+      this.formModal.get(campo)?.errors && this.formModal.get(campo)?.touched
+    );
   }
 
   handleKeyUp(e: any) {
@@ -192,5 +255,11 @@ export class ProdutoModalComponent implements OnInit {
   handleSubmit(e: any) {
     e.preventDefault();
     console.log('foi...');
+  }
+
+  aplicaCssErro(campo: string) {
+    const classeCss = 'is-invalid';
+
+    return { 'is-invalid': this.verificaCampo(campo) };
   }
 }

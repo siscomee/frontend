@@ -1,7 +1,7 @@
 export interface TipoDeProduto {
   id: number;
   dsTipoProduto: string;
-  inAtivo: number;
+  inAtivo: any;
   usuarioIdAtualiza: number;
   dtUltAtualiza: Date;
 }

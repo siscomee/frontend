@@ -4,7 +4,7 @@ export interface Produto {
   vlProduto: number;
   tpMedida: string;
   qtdProduto: number;
-  inAtivo: number;
+  inAtivo: any;
   tipoProdutoId: number;
   usuarioIdAtualiza: number;
   dtUltAtualiza: Date;

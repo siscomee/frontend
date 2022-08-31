@@ -1,4 +1,4 @@
-<form [formGroup]="formModal" *ngIf="tipoForm; else deletar">
+<form [formGroup]="formModal" (ngSubmit)="handleSubmit($event)" *ngIf="tipoForm; else deletar">
   <div class="modal-header">
     <h5 class="modal-title">
       {{ tipoForm }} cadastro de {{ title | lowercase }}
@@ -14,19 +14,18 @@
   </div>
 
   <div class="modal-body">
-    <div class="form-group">
     <div class="form">
       <label class="font-weight-bold" for="tipoProdutoId">Tipo de Produto</label>
       <select id="tipoProdutoId" formControlName="tipoProdutoId" [attr.disabled]="!editavel && !this.novoCadastro ? '' : null" [class]="aplicaCssErro('tipoProdutoId')"
-      class="form-control" (keyup)="handleKeyUp($event)" (change)="onChangeTipo($event.target)" *ngIf="tipoDeProdutos | async as tipoDeProdutos; else loading">
+      class="form-control" (keyup)="handleKeyUp($event)" (change)="onChangeTipo($event.target)" *ngIf="tiposDeProdutos | async as tiposDeProdutos; else loading">
         <option selected="" value="0">Selecione...</option>
-        <option *ngFor=" let tipoDeProduto of tipoDeProdutos" value="{{ tipoDeProduto.id }}"> {{ tipoDeProduto.dsTipoProduto }}</option>
+        <option *ngFor=" let produto of tiposDeProdutos" value="{{ produto.id }}">{{ produto.dsTipoProduto }}</option>
       </select>
-      <br>
+
       <app-form-field
         formControlName="nmProduto"
         [classeCss]="aplicaCssErro('nmProduto')"
-        id="produto"
+        id="nmProduto"
         label="Produto"
         [control]="formModal.get('nmProduto')"
         autocomplete="nmProduto"
@@ -34,6 +33,7 @@
         [rows]="'2'"
       ></app-form-field>
 
+      <div></div>
       <app-form-field
         formControlName="vlProduto"
         [classeCss]="aplicaCssErro('vlProduto')"
@@ -42,7 +42,7 @@
         [control]="formModal.get('vlProduto')"
         autocomplete="vlProduto"
         [isReadOnly]="!this.novoCadastro && !editavel"
-        [rows]="'1'"
+        [rows]="'2'"
       ></app-form-field>
 
       <app-form-field
@@ -73,7 +73,8 @@
           type="radio"
           formControlName="inAtivo"
           id="ativo"
-          value="1"
+          value="true"
+          (keyup)="handleKeyUp($event)"
           [attr.disabled]="!editavel && !this.novoCadastro ? '' : null"
         />
         <label class="form-check-label" for="ativo">Ativo</label>
@@ -84,26 +85,25 @@
           type="radio"
           formControlName="inAtivo"
           id="inativo"
-          value="0"
+          value="false"
+          (keyup)="handleKeyUp($event)"
           [attr.disabled]="!editavel && !this.novoCadastro ? '' : null"
         />
         <label class="form-check-label" for="inativo">Inativo</label>
       </div>
     </div>
   </div>
-
   <div class="modal-footer">
     <div class="float-right">
-      <!-- Botão Cancelar -->
+      <!-- HTML markup for Back button -->
       <button
-        (click)="activeModal.dismiss('Cancel click')"
+        (click)="cancelando()"
         class="btn btn-outline-secondary w-20"
         type="submit"
       >
         <span translate><i class="fa fa-arrow-left"></i> Cancelar</span>
       </button>
-
-      <!-- Botão Salvar -->
+      <!-- HTML markup for Cadatrar button -->
       <button
         (click)="onSalvar()"
         class="btn btn-primary w-20 ml-2"
@@ -112,8 +112,7 @@
       >
         <span translate><i class="fas fa-plus"></i> Salvar</span>
       </button>
-
-      <!-- Botão Editar -->
+      <!-- HTML markup for Editar button -->
       <button
         (click)="onSalvar()"
         class="btn btn-primary w-20 ml-2"
@@ -125,7 +124,8 @@
       </button>
     </div>
   </div>
-</div>
+
+  <!--app-form-debug [form]="formModal"></app-form-debug-->
 </form>
 
 <ng-template #loading>
@@ -135,36 +135,20 @@
 <ng-template #deletar>
   <div class="modal-header">
     <h4 class="modal-title" id="modal-title">Confirmar exclusão</h4>
-    <button
-      type="button"
-      class="close"
-      aria-describedby="modal-title"
-      (click)="activeModal.dismiss('Cross click')"
-    >
+    <button type="button" class="close" aria-describedby="modal-title" (click)="activeModal.dismiss('Cross click')">
       <span aria-hidden="true">&times;</span>
     </button>
   </div>
   <div class="modal-body">
-    <p>
-      <strong>Tem certeza que deseja excluir {{ title | lowercase }}? </strong>
-    </p>
-    <p>
-      <span class="text-danger"
-        >Se você confirmar a exclusão, não será mais possível listar e editar
-        este item.</span
-      >
+    <p><strong>Tem certeza que deseja excluir esse cadastro? </strong></p>
+    <p>Toda informação associada a ele será apagada.
+      <span class="text-danger">Essa operação não pode ser desfeita.</span>
     </p>
   </div>
   <div class="modal-footer">
-    <button
-      type="button"
-      class="btn btn-outline-secondary"
-      (click)="activeModal.dismiss('Cancel click')"
-    >
-      Cancelar
-    </button>
-    <button type="button" class="btn btn-danger" (click)="onDeletar()">
-      Excluir
-    </button>
+    <button type="button" class="btn btn-outline-secondary"
+      (click)="activeModal.dismiss('Cancel click')">Cancelar</button>
+    <button type="button" class="btn btn-primary" (click)="Ondeletar()">Excluir</button>
   </div>
 </ng-template>
+
