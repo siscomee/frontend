@@ -1,113 +1,176 @@
 <section class="m-4">
-
-  <h1 class="mb-4">Cadastro de {{ title | lowercase }}</h1>
+  <h1 class="mb-4">Cadastrar {{ title | lowercase }}</h1>
 
   <div class="card mb-4 p-4">
     <div class="form pb-3">
-      <div class="form-row" [formGroup]="queryField">
-
-        <div class="col-lg-6">
-          <app-form-field formControlName="nmProduto" [classeCss]="aplicaCssErro('nmProduto')"
-            id="produto" label="Produto" [control]="queryField.get('nmProduto')">
-          </app-form-field>
+      <div class="form-row">
+        <div class="col-lg-2">
+          <label for="dsTipoProduto" class="font-weight-bold">Tipo de Produto</label>
+          <select id="dsTipoProduto" class="form-control" (change)="onChangeTipo($event.target)" *ngIf="tipoDeProdutos | async as tipoDeProdutos; else loading">
+            <option selected="" value="0">Selecione...</option>
+            <option *ngFor=" let produto of tipoDeProdutos" value="{{ produto.id }}">{{ produto.dsTipoProduto }}</option>
+          </select>
         </div>
-
+        <div class="col-lg-5">
+          <label for="nmProduto" class="font-weight-bold">Produto</label>
+          <input
+            id="nmProduto"
+            (keyup)="onChangeDs($event.target)"
+            class="form-control"
+            type="text"
+            maxlength="80"
+          />
+        </div>
         <div class="col">
           <label for="inAtivo" class="font-weight-bold">Situação</label>
-          <select formControlName="inAtivo" id="inAtivo" class="form-control">
-            <option value="-1">TODOS</option>
+          <select id="inAtivo" class="form-control" (change)="onChangeSituacao($event.target)">
+            <option selected value="-1">TODOS</option>
             <option value="1">Ativo</option>
             <option value="0">Inativo</option>
           </select>
         </div>
+
         <div class="col">
-          <label style="display:block;">&nbsp;</label>
-          <button class="btn btn-primary btn-block" type="submit" (click)="onBuscar()">Buscar</button>
+          <label style="display: block">&nbsp;</label>
+          <button type="button" class="btn btn-primary btn-block" (click)="filtrar()">Buscar</button>
         </div>
         <div class="col">
-          <label style="display:block;">&nbsp;</label>
-          <button type="submit" class="btn btn-outline-primary px-4 btn-block"
-            (click)="abrirModal(produto, 'Novo', true, false)">Novo</button>
+          <label style="display: block">&nbsp;</label>
+          <button type="button" class="btn btn-outline-primary px-4 btn-block" (click)="abrirModal(produto, 'Novo', true, false)">Novo</button>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="card p-3 table-responsive-12 overflow-auto ">
-    <div class="" *ngIf="( buscaResults  || produtosResult ) as produtos; else loading">
-      <table class="table table-bordered table-striped  table-hover">
+  <div class="card p-3 table-responsive-xl-12">
+    <div
+      class=""
+      *ngIf="produtos | async as produtos; else loading"
+    >
+      <table class="table table-bordered table-striped table-hover">
         <thead>
           <tr>
-            <th scope="col" class="col-1" (click)="setOrder('id')">Nº
-              <span class="sort-arrow" *ngIf="key =='id'">{{ reverse ? '▲' : '▼' }}</span>
+            <th scope="col" class="col-1" (click)="setOrder('id')">
+              Nº
+              <span class="sort-arrow" *ngIf="key == 'id'">{{
+                reverse ? "▲" : "▼"
+              }}</span>
             </th>
-            <th scope="col" class="col-2" (click)="setOrder('nmProduto')">Produto
-              <span class="sort-arrow" *ngIf="key =='nmProduto'">{{ reverse ? '▲' : '▼' }}</span>
+            <th scope="col" class="col-2" (click)="setOrder('dsTipoProduto')">
+              Tipo de Produto
+              <span class="sort-arrow" *ngIf="key == 'dsTipoProduto'">{{
+                reverse ? "▲" : "▼"
+              }}</span>
             </th>
-            <th scope="col" class="col-1" (click)="setOrder('dsTipoProduto')">Tipo de Produto
-              <span class="sort-arrow" *ngIf="key =='dsTipoProduto'">{{ reverse ? '▲' : '▼' }}</span>
+            <th scope="col" class="col-3" (click)="setOrder('nmProduto')">
+              Produto
+              <span class="sort-arrow" *ngIf="key == 'nmProduto'">{{
+                reverse ? "▲" : "▼"
+              }}</span>
             </th>
-            <th scope="col" class="col-1" (click)="setOrder('vlProduto')">Valor
-              <span class="sort-arrow" *ngIf="key =='vlProduto'">{{ reverse ? '▲' : '▼' }}</span>
+            <th scope="col" class="col-1" (click)="setOrder('nuCnpj')">
+              Valor
+              <span class="sort-arrow" *ngIf="key == 'vlproduto'">{{
+                reverse ? "▲" : "▼"
+              }}</span>
             </th>
-            <th scope="col" class="col-1" (click)="setOrder('tpMedida')">Medida
-              <span class="sort-arrow" *ngIf="key =='tpMedida'">{{ reverse ? '▲' : '▼' }}</span>
+            <th scope="col" class="col-1" (click)="setOrder('tpMedida')">
+              Medida
+              <span class="sort-arrow" *ngIf="key == 'tpMedida'">{{
+                reverse ? "▲" : "▼"
+              }}</span>
             </th>
-            <th scope="col" class="col-1" (click)="setOrder('qtdProduto')">Quantidade
-              <span class="sort-arrow" *ngIf="key =='qtdProduto'">{{ reverse ? '▲' : '▼' }}</span>
+            <th scope="col" class="col-1" (click)="setOrder('qtdProduto')">
+              Quantidade
+              <span class="sort-arrow" *ngIf="key == 'qtdProduto'">{{
+                reverse ? "▲" : "▼"
+              }}</span>
             </th>
-            <th scope="col" class=" col-1" (click)="setOrder('inAtivo')">Situação
-              <span class="sort-arrow" *ngIf="key =='inAtivo'">{{ reverse ? '▲' : '▼' }}</span>
+            <th scope="col" class="col-1" (click)="setOrder('inAtivo')">
+              Situação
+              <span class="sort-arrow" *ngIf="key == 'inAtivo'">{{
+                reverse ? "▲" : "▼"
+              }}</span>
             </th>
-            <th scope="col" class=" col-1">Ações</th>
+            <th scope="col" class="col-1">Ações</th>
           </tr>
         </thead>
+
         <tbody *ngIf="produtos.length != 0">
           <tr
-            *ngFor="let produto of produtos | paginate: { itemsPerPage: pageSize, currentPage: paginaAtual, totalItems: count } | orderBy: key :reverse ">
+            *ngFor="
+              let produto of produtos
+                | paginate: { itemsPerPage: 10, currentPage: paginaAtual }
+                | orderBy: key:reverse
+            "
+          >
             <td>{{ produto.id }}</td>
-            <td>{{ produto.nmProduto }}</td>
             <td>{{ produto.dsTipoProduto }}</td>
+            <td>{{ produto.nmProduto }}</td>
             <td>{{ produto.vlProduto }}</td>
             <td>{{ produto.tpMedida }}</td>
             <td>{{ produto.qtdProduto }}</td>
-            <td>{{ produto.inAtivo ? 'Ativo': 'Inativo' }}</td>
+            <td>{{ produto.inAtivo == 'true' ? "Ativo" : "Inativo" }}</td>
             <td>
-              <button type="submit" (click)="abrirModal(produto, 'Detalhar', false, false)" class="btn p-1"
-                placement="top" ngbTooltip="Detalhar">
-                <h5><i class="bi bi-info-circle-fill" style="color: #0d6efd"></i></h5>
+              <button
+                type="submit"
+                (click)="abrirModal(produto, 'Detalhar', false, false)"
+                class="btn p-1"
+                placement="top"
+                ngbTooltip="Detalhar"
+              >
+                <h5>
+                  <i class="bi bi-info-circle-fill" style="color: #0d6efd"></i>
+                </h5>
               </button>
-              <button type="submit" (click)="abrirModal(produto, 'Editar', false, true)" class="btn p-1"
-                placement="top" ngbTooltip="Editar">
-                <h5><i class="bi bi-pencil-square" style="color: #0d6efd"></i></h5>
+              <button
+                type="submit"
+                (click)="abrirModal(produto, 'Editar', false, true)"
+                class="btn p-1"
+                placement="top"
+                ngbTooltip="Editar"
+              >
+                <h5>
+                  <i class="bi bi-pencil-square" style="color: #0d6efd"></i>
+                </h5>
               </button>
-              <button type="submit" (click)="abrirModal(produto, '', false, false)" class="btn p-1" placement="top"
-                ngbTooltip="Excluir" [disabled]="!produto.inAtivo">
+              <button
+                type="submit"
+                (click)="abrirModal(produto, '', false, false)"
+                class="btn p-1"
+                placement="top"
+                ngbTooltip="Excluir"
+                [disabled]="produto.inAtivo == '0'"
+              >
                 <h5><i class="bi bi-x-circle" style="color: #0d6efd"></i></h5>
               </button>
             </td>
           </tr>
         </tbody>
-        <tbody *ngIf="produtos.length == 0 && buscaResults.length == 0">
-          <tr class="m5">
-            <td colspan="5"><span>Nenhum registro encontrado.</span></td>
+        <tbody *ngIf="produtos.length == 0">
+          <tr>
+            <td colspan="4">Nenhum registro encontrado.</td>
           </tr>
         </tbody>
       </table>
 
       <p>
-        Você está na <strong>{{ paginaAtual }}ª</strong> página, exibindo <strong>{{ produtos.length }}</strong>
-        registros de um total de <strong>{{ count }}</strong>.
+        Você está na <strong>{{ paginaAtual }}ª</strong> página, exibindo
+        <strong>10</strong> registros de um total de
+        <strong>{{ produtos.length }}</strong
+        >.
       </p>
 
-      <pagination-controls (pageChange)="handlePageChange($event)" previousLabel="Anterior" nextLabel="Próximo"
-        class="my-pagination">
+      <pagination-controls
+        (pageChange)="paginaAtual = $event"
+        previousLabel="Anterior"
+        nextLabel="Próximo"
+        class="my-pagination"
+      >
       </pagination-controls>
     </div>
   </div>
-
   <ng-template #loading>
-    <span>Carregando Cadastros de Produtos...</span>
+    <span>Carregando...</span>
   </ng-template>
-
 </section>

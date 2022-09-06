@@ -1,17 +1,19 @@
-import { TipoDeProduto } from 'src/app/shared/models/tipo-de-produto';
-import { Component, OnInit } from '@angular/core';
-import { FormBuilder, Validators, FormGroup } from '@angular/forms';
+import { ResultadoProdutoForm } from '../../../shared/models/resultado-produto-form';
 import { Router } from '@angular/router';
-import { Subject, Observable } from 'rxjs';
+import { MensagemConfirmService } from './../../../shared/services/mensagem-confirm.service';
+import { Component, OnInit } from '@angular/core';
 
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { OrderPipe } from 'ngx-order-pipe';
 
-import { FormValidator } from './../../../shared/form-validator';
-import { MensagemConfirmService } from './../../../shared/services/mensagem-confirm.service';
-import { ProdutoService } from '../../../shared/services/produto.service';
 import { Produto } from '../../../shared/models/produto';
+import { empty, Observable, Subject } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { FormBuilder, Validators, FormGroup } from '@angular/forms';
+import { FormValidator } from './../../../shared/form-validator';
+import { ProdutoService } from '../../../shared/services/produto.service';
 import { ProdutoModalComponent } from './produto-modal/produto-modal.component';
-import { ResultadoProdutoForm } from '../../../shared/models/resultado-produto-form';
+import { TipoDeProduto } from 'src/app/shared/models/tipo-de-produto';
 
 @Component({
   selector: 'app-produto',
@@ -21,93 +23,28 @@ import { ResultadoProdutoForm } from '../../../shared/models/resultado-produto-f
 export class ProdutoComponent implements OnInit {
   title: string = 'Produto';
 
-  tipoDeProduto!: TipoDeProduto;
+  paginaAtual: number = 1;
+  key: string = 'InAtivo';
+  reverse: boolean = false;
+
+  produto!: Produto;
+  TipoDeProduto!: TipoDeProduto;
 
   produtos!: Observable<Produto[]>;
   tipoDeProdutos!: Observable<TipoDeProduto[]>;
 
-  //paginação
-  paginaAtual: number = 1;
-  pageSize!: number;
-  count = 0;
-  totalElements!: number;
+  idTipoDeProduto: number = 0;
+  nmProduto: String = '';
+  situacao: String = '-1';
 
-  //ordenação front
-  key: string = 'InAtivo';
-  reverse: boolean = false;
-
-  //argumento abrirModal
-  produto!: Produto;
-
-  //busca e paginação
-  produtosResult!: Observable<Produto[]>;
-  buscaResults!: Produto[];
   error$ = new Subject<boolean>();
-  queryField!: FormGroup;
-  tipoDeProdutosResults: any;
 
   constructor(
     public modalService: NgbModal,
     private mensagemConfirmService: MensagemConfirmService,
     private service: ProdutoService,
-    private router: Router,
-    private formBuilder: FormBuilder
+    private router: Router
   ) {}
-
-  ngOnInit(): void {
-    this.queryField = this.formBuilder.group({
-      nmProduto: [null, [Validators.minLength(3), Validators.maxLength(100)]],
-      nuCnpj: [null],
-      inAtivo: ['-1'],
-    });
-    this.pegarLista();
-  }
-
-  //paginação
-  pegarParams(page: number, inAtivo?: number, nmProduto?: string): any {
-    let params: any = {};
-
-    if (page) {
-      params['page'] = page - 1;
-    }
-    if (inAtivo !== undefined) {
-      params['inAtivo'] = inAtivo;
-    }
-    if (nmProduto) {
-      params['nmProduto'] = nmProduto;
-    }
-    return params;
-  }
-
-  pegarLista() {
-    const params = this.pegarParams(this.paginaAtual);
-
-    this.service.list(params).subscribe(
-      (response) => {
-        this.produtosResult = response?.produtos;
-        this.pageSize = response?.paginaItens;
-        this.count = response?.itensTotal;
-      },
-      (error) => {
-        console.log(error);
-        this.handleError();
-      }
-    );
-  }
-
-  private handleError() {
-    this.mensagemConfirmService.errorToaster(
-      'Erro ao carregar cadastros de produtos. Tente novamente mais tarde.'
-    );
-  }
-
-  handlePageChange(event: number): void {
-    this.paginaAtual = event;
-    console.log(event);
-    if (this.buscaResults) {
-      this.onBuscar(event);
-    } else this.pegarLista();
-  }
 
   setOrder(value: string) {
     if (this.key === value) {
@@ -117,7 +54,6 @@ export class ProdutoComponent implements OnInit {
     this.key = value;
   }
 
-  //modal
   abrirModal(
     produto: Produto,
     tipoForm: string,
@@ -131,6 +67,8 @@ export class ProdutoComponent implements OnInit {
     modalRef.componentInstance.novoCadastro = novoCadastro;
     modalRef.componentInstance.editavel = editavel;
 
+    console.log(produto);
+
     const resultadoForm: Promise<ResultadoProdutoForm> = modalRef.result;
     this.onResultadoForm(resultadoForm);
   }
@@ -142,7 +80,7 @@ export class ProdutoComponent implements OnInit {
           this.mensagemConfirmService.abrirToast(resultadoForm);
         } else {
           this.mensagemConfirmService.abrirToast(resultadoForm);
-          this.refreshPage();
+          this.refresh();
         }
       })
       .catch(() => {
@@ -150,60 +88,75 @@ export class ProdutoComponent implements OnInit {
       });
   }
 
-  refreshPage() {
-    const currentRoute = this.router.url;
-    this.router.navigateByUrl('/', { skipLocationChange: true }).then(() => {
-      this.router.navigate([currentRoute]);
-    });
+  ngOnInit(): void {
+    this.onRefresh();
   }
 
-  //busca
-  verificaCampo(campo: string) {
-    return this.queryField.get(campo)?.errors;
+  refresh() {
+    let currentUrl = this.router.url;
+    this.router.routeReuseStrategy.shouldReuseRoute = () => false;
+    this.router.onSameUrlNavigation = 'reload';
+    this.router.navigate([currentUrl]);
   }
 
-  aplicaCssErro(campo: string) {
-    return { 'is-invalid': this.verificaCampo(campo) };
+  private handleError() {
+    this.mensagemConfirmService.errorToaster(
+      'Erro ao carregar produtos. Tente novamente mais tarde...'
+    );
   }
 
-  onBuscar(page?: number) {
-    if (this.queryField.valid) {
-      let situacaoValue =
-        Number(this.queryField.get('inAtivo')?.value) === -1
-          ? undefined
-          : Number(this.queryField.get('inAtivo')?.value);
-      let nmProdutoValue = this.queryField.get('nmProdutoValue')?.value;
-      this.paginaAtual = page ? page : 1;
-      const params = this.pegarParams(
-        this.paginaAtual,
-        situacaoValue,
-        nmProdutoValue
-      );
+  onRefresh() {
+    this.produtos = this.service.list().pipe(
+      catchError((error) => {
+        console.error(error);
+        this.error$.next(true);
+        this.handleError();
+        return empty();
+      })
+    );
 
-      this.service.list(params).subscribe(
-        (response) => {
-          this.buscaResults = response.produtos;
-          this.pageSize = response.paginaItens;
-          this.count = response.itensTotal;
-        },
-        (error) => {
-          console.log(error);
-          this.handleError();
-        }
+    this.tipoDeProdutos = this.service.listarTipos().pipe(
+      catchError((error) => {
+        console.error(error);
+        this.error$.next(true);
+        this.handleError();
+        return empty();
+      })
+    );
+  }
+
+  filtrar() {
+    // validar min. caracteres
+    if (this.nmProduto.length > 0 && this.nmProduto.length < 3) {
+      this.mensagemConfirmService.infoToaster(
+        'Informe pelo menos (3) caracteres para produto.'
       );
     } else {
-      FormValidator.verificaValidacoesForm(this.queryField);
+      this.produtos = this.service
+        .filtrar(this.idTipoDeProduto, this.nmProduto, this.situacao)
+        .pipe(
+          catchError((error) => {
+            console.error(error);
+            this.error$.next(true);
+            this.handleError();
+            return empty();
+          })
+        );
     }
   }
 
-  handleKeyUp(e: any) {
-    if (e.keyCode === 13) {
-      this.handleSubmit(e);
-    }
+  onChangeTipo(e: any) {
+    console.log(e.value);
+    this.idTipoDeProduto = e.value;
   }
 
-  handleSubmit(e: any) {
-    e.preventDefault();
-    console.log('foi...');
+  onChangeDs(e: any) {
+    console.log(e.value);
+    this.nmProduto = e.value;
+  }
+
+  onChangeSituacao(e: any) {
+    console.log(e.value);
+    this.situacao = e.value;
   }
 }
