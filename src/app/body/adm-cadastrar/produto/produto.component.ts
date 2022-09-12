@@ -78,6 +78,7 @@ export class ProdutoComponent implements OnInit {
       .then((form) => {
         if (form.tipoCrud !== 'c') {
           this.mensagemConfirmService.abrirToast(resultadoForm);
+          this.refresh();
         } else {
           this.mensagemConfirmService.abrirToast(resultadoForm);
           this.refresh();

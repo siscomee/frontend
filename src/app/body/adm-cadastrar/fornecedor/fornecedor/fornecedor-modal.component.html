@@ -42,7 +42,7 @@
         [control]="formModal.get('nuCnpj')"
         autocomplete="nuCnpj"
         [isReadOnly]="!this.novoCadastro && !editavel"
-        [rows]="'2'"
+        [rows]="'1'"
       ></app-form-field>
 
       <app-form-field
@@ -53,7 +53,7 @@
         [control]="formModal.get('nuTelefone')"
         autocomplete="nuTelefone"
         [isReadOnly]="!this.novoCadastro && !editavel"
-        [rows]="'2'"
+        [rows]="'1'"
       ></app-form-field>
 
       <div class="form-check form-check-inline">
@@ -62,8 +62,7 @@
           type="radio"
           formControlName="inAtivo"
           id="ativo"
-          value="true"
-          (keyup)="handleKeyUp($event)"
+          value="1"
           [attr.disabled]="!editavel && !this.novoCadastro ? '' : null"
         />
         <label class="form-check-label" for="ativo">Ativo</label>
@@ -74,8 +73,7 @@
           type="radio"
           formControlName="inAtivo"
           id="inativo"
-          value="false"
-          (keyup)="handleKeyUp($event)"
+          value="0"
           [attr.disabled]="!editavel && !this.novoCadastro ? '' : null"
         />
         <label class="form-check-label" for="inativo">Inativo</label>
