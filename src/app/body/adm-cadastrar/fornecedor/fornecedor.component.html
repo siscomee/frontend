@@ -103,7 +103,7 @@
             <td>{{ fornecedor.nmFornecedor }}</td>
             <td>{{ fornecedor.nuCnpj }}</td>
             <td>{{ fornecedor.nuTelefone }}</td>
-            <td>{{ fornecedor.inAtivo == 'true' ? "Ativo" : "Inativo" }}</td>
+            <td>{{ fornecedor.inAtivo == "1" && "true" ? "Ativo" : "Inativo" }}</td>
             <td>
               <button
                 type="submit"
@@ -142,7 +142,7 @@
         </tbody>
         <tbody *ngIf="fornecedores.length == 0">
           <tr>
-            <td colspan="4">Nenhum registro encontrado.</td>
+            <td colspan="8">Nenhum registro encontrado.</td>
           </tr>
         </tbody>
       </table>

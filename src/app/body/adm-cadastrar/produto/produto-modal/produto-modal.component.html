@@ -64,7 +64,7 @@
         [control]="formModal.get('qtdProduto')"
         autocomplete="qtdProduto"
         [isReadOnly]="!this.novoCadastro && !editavel"
-        [rows]="'2'"
+        [rows]="'1'"
       ></app-form-field>
 
       <div class="form-check form-check-inline">
@@ -73,7 +73,8 @@
           type="radio"
           formControlName="inAtivo"
           id="ativo"
-          value="true"
+          value="1"
+
           (keyup)="handleKeyUp($event)"
           [attr.disabled]="!editavel && !this.novoCadastro ? '' : null"
         />
@@ -85,7 +86,7 @@
           type="radio"
           formControlName="inAtivo"
           id="inativo"
-          value="false"
+          value="0"
           (keyup)="handleKeyUp($event)"
           [attr.disabled]="!editavel && !this.novoCadastro ? '' : null"
         />

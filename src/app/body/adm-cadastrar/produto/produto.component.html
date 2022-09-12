@@ -110,7 +110,7 @@
             <td>{{ produto.vlProduto }}</td>
             <td>{{ produto.tpMedida }}</td>
             <td>{{ produto.qtdProduto }}</td>
-            <td>{{ produto.inAtivo == 'true' ? "Ativo" : "Inativo" }}</td>
+            <td>{{ produto.inAtivo == "1" && "true" ? "Ativo" : "Inativo" }}</td>
             <td>
               <button
                 type="submit"
@@ -149,7 +149,7 @@
         </tbody>
         <tbody *ngIf="produtos.length == 0">
           <tr>
-            <td colspan="4">Nenhum registro encontrado.</td>
+            <td colspan="8">Nenhum registro encontrado.</td>
           </tr>
         </tbody>
       </table>

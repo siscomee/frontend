@@ -139,6 +139,9 @@ export class FornecedorModalComponent implements OnInit {
       });
     } else {
       this.verificaValidacoesForm(this.formModal);
+      this.formModal.get('inAtivo')?.value === 1
+        ? this.formModal.get('inAtivo')?.setValue('1')
+        : this.formModal.get('inAtivo')?.setValue('0');
       console.log('fomulário não está válido');
     }
   }
